@@ -7,38 +7,44 @@ class Game {
 		this.drones = [];
 
 		//Matter physics
-		this.engine = Engine.create();
-		this.world = this.engine.world;
+
 	}
 
 	setup() {
-
+		for (var i = 0; i < 1; i++) {
+			this.drones.push(new Drone)
+		}
 	}
 
 	render() {
 		this.camera.begin();
-		this.camera.zoomTo(this.map.size + 50);
-
+		this.camera.moveTo(this.drones[0].body.position.x, this.drones[0].body.position.y);
+		this.camera.zoomTo(width * 4 + 50);
 
 		this.map.render();
 
 		//Render matter objects
-		noFill();
-		stroke(255);
-		strokeWeight(1);
-		for (let body of this.world.bodies) {
-			beginShape();
-			for (let vert of body.vertices) {
-				vertex(vert.x, vert.y);
+		fill(12);
+		for (let body of world.bodies) {
+			if (!(body.self instanceof Drone)) {
+				beginShape();
+				for (let vert of body.vertices) {
+					vertex(vert.x, vert.y);
+				}
+				endShape(CLOSE);
 			}
-			endShape(CLOSE);
+		}
+
+		for (let drone of this.drones) {
+			drone.render();
 		}
 
 		this.camera.end();
 	}
 
 	update() {
-		//Update physics engine
-		Engine.update(this.engine);
+		for (let drone of this.drones) {
+			drone.update();
+		}
 	}
 }
