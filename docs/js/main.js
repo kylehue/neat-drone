@@ -23,9 +23,9 @@ let drone;
 let flames = [];
 
 function preload() {
-	drone = loadImage("assets/drone.png");
+	drone = loadImage("fassets/drone.png");
 	for (var i = 0; i < 4; i++) {
-		flames.push(loadImage(`assets/thruster-flame/${i + 1}.png`));
+		flames.push(loadImage(`fassets/thruster-flame/${i + 1}.png`));
 	}
 }
 
