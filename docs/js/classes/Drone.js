@@ -36,6 +36,7 @@ class Drone {
 				group: -category
 			},
 			density: 0.1,
+			friction: 0.4,
 			self: this
 		});
 
@@ -46,6 +47,7 @@ class Drone {
 				group: -category
 			},
 			density: 0.1,
+			friction: 0.4,
 			self: this
 		});
 
@@ -97,25 +99,30 @@ class Drone {
 			}
 		}*/
 
-		//Add body design
+		//Body design
 		push();
 		translate(this.body.position.x, this.body.position.y);
 		rotate(this.body.angle);
-		image(drone, -this.body.width / 2, -this.body.height / 2 + 36, this.body.width, this.body.height);
+		image(images.drone, -this.body.width / 2, -this.body.height / 2 + 36, this.body.width, this.body.height);
 
-		//Lights
-		noStroke();
-		let length = 20;
-		let speed = 8;
-		let anim = (frameCount % length) * speed;
-		fill(255, 100, 140, map(anim, 1, length * speed, 80, 0));
-		beginShape();
-		let offsetXA = -this.body.width / 4 - 13;
-		let offsetXB = this.body.width / 4 + 13;
-		let offsetY = -20;
-		circle(offsetXA, offsetY, anim);
-		circle(offsetXB, offsetY, anim);
-		endShape();
+		let bodyAngle = Math.atan2(sin(this.body.angle), cos(this.body.angle)); //constrained
+		let isFalling = this.body.velocity.y > 5;
+		let isLateral = bodyAngle > PI * 0.25 || bodyAngle < -PI * 0.25;
+		//Red lights
+		if (isFalling || isLateral) {
+			let length = 20;
+			let speed = 8;
+			let anim = (frameCount % length) * speed;
+			noStroke();
+			fill(255, 100, 140, map(anim, 1, length * speed, 80, 0));
+			beginShape();
+			let offsetXA = -this.body.width / 4 - 13;
+			let offsetXB = this.body.width / 4 + 13;
+			let offsetY = -20;
+			circle(offsetXA, offsetY, anim);
+			circle(offsetXB, offsetY, anim);
+			endShape();
+		}
 		pop();
 
 		//Thrust flames
@@ -123,7 +130,7 @@ class Drone {
 			push();
 			translate(this.thrusterLeftBody.position.x, this.thrusterLeftBody.position.y);
 			rotate(this.thrusterLeftBody.angle);
-			let img = flames[floor(random(flames.length))];
+			let img = images.flames[floor(random(images.flames.length))];
 			let _width = 40;
 			let _height = 120;
 			image(img, -_width / 2, _height / 4, _width, _height);
@@ -134,6 +141,10 @@ class Drone {
 			beginShape();
 			circle(0, 100, random(130, 170));
 			endShape();
+			fill(255, 90, 50, random(10, 30))
+			beginShape();
+			circle(0, 90, random(80, 110));
+			endShape();
 			pop();
 		}
 
@@ -141,16 +152,20 @@ class Drone {
 			push();
 			translate(this.thrusterRightBody.position.x, this.thrusterRightBody.position.y);
 			rotate(this.thrusterRightBody.angle);
-			let img = flames[floor(random(flames.length))];
+			let img = images.flames[floor(random(images.flames.length))];
 			let _width = 40;
 			let _height = 120;
 			image(img, -_width / 2, _height / 4, _width, _height);
 
 			//Light
 			noStroke();
-			fill(255, 50, 0, random(10, 30))
+			fill(255, 50, 10, random(10, 30))
 			beginShape();
 			circle(0, 100, random(130, 170));
+			endShape();
+			fill(255, 90, 50, random(10, 30))
+			beginShape();
+			circle(0, 90, random(80, 110));
 			endShape();
 			pop();
 		}
@@ -164,7 +179,7 @@ class Drone {
 
 		//Draw left thruster
 		fill(this.color);
-		stroke(clr[0] - 30, clr[1] - 30, clr[2] - 30);
+		stroke(clr[0] - 30, clr[1] - 30, clr[2] - 30, 100);
 		for (let part of this.thrusterLeftBody.parts) {
 			if (part != this.thrusterLeftBody.parts[0]) {
 				beginShape();
@@ -176,7 +191,7 @@ class Drone {
 		}
 
 		//Draw right thruster
-		fill(clr[0] + 20, clr[1] + 20, clr[2] + 20);
+		fill(clr[0] + 20, clr[1] + 20, clr[2] + 20, 100);
 		stroke(clr[0], clr[1], clr[2]);
 		for (let part of this.thrusterRightBody.parts) {
 			if (part != this.thrusterRightBody.parts[0]) {
@@ -187,6 +202,24 @@ class Drone {
 				endShape(CLOSE);
 			}
 		}
+
+		//Thruster left design
+		let thrusterWidth = 65; //svg size
+		let thrusterHeight = 113; //svg size
+		push();
+		translate(this.thrusterLeftBody.position.x, this.thrusterLeftBody.position.y);
+		rotate(this.thrusterLeftBody.angle);
+		image(images.thruster, -thrusterWidth / 2, -thrusterHeight / 2, thrusterWidth, thrusterHeight);
+		pop();
+
+		//Thruster right design
+		push();
+		translate(this.thrusterRightBody.position.x, this.thrusterRightBody.position.y);
+		rotate(this.thrusterRightBody.angle);
+		image(images.thruster, -thrusterWidth / 2, -thrusterHeight / 2, thrusterWidth, thrusterHeight);
+		pop();
+
+
 
 		this.thrustingLeft = false;
 		this.thrustingRight = false;

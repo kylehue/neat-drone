@@ -39,6 +39,13 @@ class Game {
 			drone.render();
 		}
 
+		noFill();
+		stroke(255);
+		strokeWeight(2);
+		beginShape();
+		arc(this.drones[0].body.position.x, this.drones[0].body.position.y - 300, 300, 300, 0, 0);
+		endShape();
+
 		this.camera.end();
 	}
 

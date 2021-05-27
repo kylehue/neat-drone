@@ -19,13 +19,15 @@ const collisionMask = {
 }
 
 let game, neat;
-let drone;
-let flames = [];
+
+const images = {};
+images.flames = [];
 
 function preload() {
-	drone = loadImage("assets/drone.png");
+	images.drone = loadImage("assets/drone_small.png");
+	images.thruster = loadImage("assets/thruster_small.png");
 	for (var i = 0; i < 4; i++) {
-		flames.push(loadImage(`assets/thruster-flame/${i + 1}.png`));
+		images.flames.push(loadImage(`assets/thruster-flame/${i + 1}_small.png`));
 	}
 }
 
