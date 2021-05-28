@@ -5,6 +5,7 @@ const Events = Matter.Events;
 const Engine = Matter.Engine;
 const engine = Engine.create();
 const world = engine.world;
+world.gravity.y = 0;
 const World = Matter.World;
 const Vertices = Matter.Vertices;
 const SVG = Matter.Svg;
@@ -15,7 +16,8 @@ Common.setDecomp(decomp);
 const collisionMask = {
 	staticBody: Body.nextCategory(),
 	drone: Body.nextCategory(),
-	thruster: Body.nextCategory()
+	thruster: Body.nextCategory(),
+	rock: Body.nextCategory()
 }
 
 let game, neat;
@@ -43,15 +45,18 @@ function setup() {
 }
 
 function draw() {
-	background(10);
+	let clr = color(game.map.background).levels;
+	background(clr[0] - 2, clr[1] - 2, clr[2] - 2);
 	fill(255);
 	stroke(255);
 
+	game.render();
 	game.update();
 	Engine.update(engine);
-	game.render();
 }
 
 function windowResized() {
 	resizeCanvas(innerWidth, innerHeight);
+	game = new Game();
+	game.setup();
 }

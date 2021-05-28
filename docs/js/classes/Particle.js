@@ -33,7 +33,7 @@ class Particle {
 		this.diameter = lerp(this.diameter, this.maxDiameter, 0.01);
 		this.opacity = lerp(this.opacity, 0, 0.08);
 
-		if (this.position.y + this.diameter >= game.map.size / 2) {
+		if (dist(this.position.x, this.position.y, game.map.planet.position.x, game.map.planet.position.y) < game.map.planet.circleRadius) {
 			this.velocity.y *= 0.7;
 			this.velocity.x += this.bx;
 		}

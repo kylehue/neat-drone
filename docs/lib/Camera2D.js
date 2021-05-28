@@ -13,7 +13,8 @@ class Camera2D {
 			bottom: 0,
 			width: 0,
 			height: 0,
-			scale: [1.0, 1.0]
+			scale: [1.0, 1.0],
+			angle: 0
 		};
 		this.moveTransitionSpeed = settings.moveTransitionSpeed || 1;
 		this.zoomTransitionSpeed = settings.zoomTransitionSpeed || 1;
@@ -37,6 +38,7 @@ class Camera2D {
 		this.context.save();
 		this.applyScale();
 		this.applyTranslation();
+		this.applyRotation();
 	}
 
 	end() {
@@ -51,6 +53,10 @@ class Camera2D {
 		this.context.translate(-this.viewport.left, -this.viewport.top);
 	}
 
+	applyRotation() {
+		this.context.rotate(this.viewport.angle);
+	}
+
 	updateViewport() {
 		this.aspectRatio = this.context.canvas.width / this.context.canvas.height;
 		this.viewport.width = Camera2D.lerp(this.viewport.width, this.distance * Math.tan(this.fieldOfView), this.sizeTransitionSpeed);
@@ -61,6 +67,11 @@ class Camera2D {
 		this.viewport.bottom = this.viewport.top + this.viewport.height;
 		this.viewport.scale[0] = this.context.canvas.width / this.viewport.width;
 		this.viewport.scale[1] = this.context.canvas.height / this.viewport.height;
+	}
+
+	rotate(angle) {
+		this.viewport.angle = angle;
+		this.updateViewport();
 	}
 
 	zoomTo(z) {

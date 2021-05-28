@@ -3,13 +3,12 @@ class Drone {
 		const bodyVertices = Vertices.fromPath("M -89 -62 L -30 -92 L 30 -92 L 89 -62 L 277 -115 L 275 -101 L 57 3 L 80 24 L 100 3 L 129 46 L 138 36 L 141 14 L 147 19 L 152 41 L 145 63 L 94 130 L 117 148 L 36 148 L 76 130 L 128 63 L 101 25 L 77 54 L 30 12 L -30 12 L -77 54 L -101 25 L -128 63 L -76 130 L -36 148 L -117 148 L -94 130 L -145 63 L -152 41 L -147 19 L -141 14 L -138 36 L -129 46 L -100 3 L -80 24 L -57 3 L -275 -101 L -277 -115 Z");
 		const thrusterVertices = Vertices.fromPath("M -16.8 -54.4 L 16.8 -54.4 L 16.8 -44.8 L 32.8 2.4 L 32.8 33.6 L 16.8 59.2 L -16.8 59.2 L -32.8 33.6 L -32.8 2.4 L -16.8 -45.6 Z");
 		let offset = 100;
-		let position = createVector(random(-game.map.size / 2 + offset, game.map.size / 2 - offset), random(-game.map.size / 2 + offset, game.map.size / 2 - offset));
-
+		let position = createVector(random(-game.map.size / 2 + offset, game.map.size / 2 - offset), game.map.size / 2 - 200);
 		let category = Body.nextCategory();
-		this.body = Bodies.fromVertices(position.x, position.y, bodyVertices, {
+		this.body = Bodies.fromVertices(0, game.map.size / 2 - game.map.planetOffset - 200, bodyVertices, {
 			collisionFilter: {
 				category: collisionMask.drone,
-				mask: collisionMask.staticBody | collisionMask.drone | collisionMask.thruster,
+				mask: collisionMask.staticBody | collisionMask.drone | collisionMask.thruster | collisionMask.rock,
 				group: -category
 			},
 			density: 0.3,
@@ -32,7 +31,7 @@ class Drone {
 		this.thrusterLeftBody = Bodies.fromVertices(this.body.position.x, this.body.position.y, thrusterVertices, {
 			collisionFilter: {
 				category: collisionMask.thruster,
-				mask: collisionMask.staticBody | collisionMask.drone | collisionMask.thruster,
+				mask: collisionMask.staticBody | collisionMask.drone | collisionMask.thruster | collisionMask.rock,
 				group: -category
 			},
 			density: 0.1,
@@ -43,7 +42,7 @@ class Drone {
 		this.thrusterRightBody = Bodies.fromVertices(this.body.position.x, this.body.position.y, thrusterVertices, {
 			collisionFilter: {
 				category: collisionMask.thruster,
-				mask: collisionMask.staticBody | collisionMask.drone | collisionMask.thruster,
+				mask: collisionMask.staticBody | collisionMask.drone | collisionMask.thruster | collisionMask.rock,
 				group: -category
 			},
 			density: 0.1,
@@ -71,17 +70,21 @@ class Drone {
 
 		World.add(world, [this.body, this.thrusterLeftBody, constraintLeftThruster, this.thrusterRightBody, constraintRightThruster]);
 		this.color = "#202234";
-
 		this.particles = [];
 
+		//
 		this.thrustPower = 30;
 		this.thrusterAngleVelocity = 0.1;
 		this.thrustingLeft = false;
 		this.thrustingRight = false;
+		this.thrusterLeftRotation = 0;
+		this.thrusterRightRotation = 0;
+		this.thrusterLeftRotationLimit = PI * 0.25;
+		this.thrusterRightRotationLimit = PI * 0.75;
 
-		//Point thrusters downwards
+		//
 		this.angleOffset = -PI / 2;
-		console.log(this)
+		this.planetAngle = Math.atan2(game.map.planet.position.y - this.body.position.y, game.map.planet.position.x - this.body.position.x);
 	}
 
 	render() {
@@ -107,7 +110,7 @@ class Drone {
 
 		let bodyAngle = Math.atan2(sin(this.body.angle), cos(this.body.angle)); //constrained
 		let isFalling = this.body.velocity.y > 5;
-		let isLateral = bodyAngle > PI * 0.25 || bodyAngle < -PI * 0.25;
+		let isLateral = bodyAngle > PI * 0.2 || bodyAngle < -PI * 0.2;
 		//Red lights
 		if (isFalling || isLateral) {
 			let length = 20;
@@ -219,8 +222,6 @@ class Drone {
 		image(images.thruster, -thrusterWidth / 2, -thrusterHeight / 2, thrusterWidth, thrusterHeight);
 		pop();
 
-
-
 		this.thrustingLeft = false;
 		this.thrustingRight = false;
 	}
@@ -229,6 +230,10 @@ class Drone {
 		//Disable physics rotation
 		Body.setAngularVelocity(this.thrusterLeftBody, 0);
 		Body.setAngularVelocity(this.thrusterRightBody, 0);
+
+		//Set thrusters' angle relative to body angle
+		Body.setAngle(this.thrusterLeftBody, this.body.angle + this.thrusterLeftRotation);
+		Body.setAngle(this.thrusterRightBody, this.body.angle + this.thrusterRightRotation);
 
 		//Check controls
 		if (keyIsDown(65)) this.thrustLeft(10);
@@ -247,11 +252,36 @@ class Drone {
 
 		}
 
-		//Don't let the drone go higher than the map
+		//Don't let the drone go outside the map size
+		//Top
 		if (this.body.position.y <= -game.map.size / 2) {
 			Body.applyForce(this.body, this.body.position, {
 				x: 0,
 				y: 50
+			});
+		}
+
+		//Bottom
+		if (this.body.position.y >= game.map.size / 2) {
+			Body.applyForce(this.body, this.body.position, {
+				x: 0,
+				y: -50
+			});
+		}
+
+		//Left
+		if (this.body.position.x <= -game.map.size / 2) {
+			Body.applyForce(this.body, this.body.position, {
+				x: 50,
+				y: 0
+			});
+		}
+
+		//Right
+		if (this.body.position.x >= game.map.size / 2) {
+			Body.applyForce(this.body, this.body.position, {
+				x: -50,
+				y: 0
 			});
 		}
 
@@ -265,24 +295,41 @@ class Drone {
 				}
 			}
 		}
+
+		//Apply gravity
+		this.planetAngle = Math.atan2(game.map.planet.position.y - this.body.position.y, game.map.planet.position.x - this.body.position.x);
+		Body.applyForce(this.body, this.body.position, {
+			x: cos(this.planetAngle) * 10,
+			y: sin(this.planetAngle) * 10
+		});
+
 	}
 
 	rotateThruster(thruster, rotation) {
-		//Check if turning left
-		if (rotation > 0) {
-			//Limit the angle to 45 degrees
-			if (thruster.angle + this.angleOffset < this.angleOffset * 0.5) {
-				Body.rotate(thruster, rotation);
+		const _rotate = (thrusterRotation) => {
+			const angle = Math.atan2(sin(this[thrusterRotation] - this.angleOffset), cos(this[thrusterRotation] - this.angleOffset));
+
+			//Check if turning left
+			if (rotation < 0) {
+				if (angle < this.thrusterLeftRotationLimit) return;
+				this[thrusterRotation] += rotation;
+			} else {
+				if (angle > this.thrusterRightRotationLimit) return;
+				this[thrusterRotation] += rotation;
 			}
-		} else {
-			if (thruster.angle + this.angleOffset > this.angleOffset * 1.5) {
-				Body.rotate(thruster, rotation);
-			}
+		}
+
+		if (thruster == this.thrusterLeftBody) {
+			_rotate("thrusterLeftRotation");
+		}
+
+		if (thruster == this.thrusterRightBody) {
+			_rotate("thrusterRightRotation");
 		}
 	}
 
 	thrustLeft(power) {
-		let angle = this.thrusterLeftBody.angle + this.angleOffset;
+		const angle = this.thrusterLeftBody.angle + this.angleOffset;
 		Body.applyForce(this.thrusterLeftBody, this.thrusterLeftBody.position, {
 			x: cos(angle) * power,
 			y: sin(angle) * power
@@ -294,7 +341,7 @@ class Drone {
 	}
 
 	thrustRight(power) {
-		let angle = this.thrusterRightBody.angle + this.angleOffset;
+		const angle = this.thrusterRightBody.angle + this.angleOffset;
 		Body.applyForce(this.thrusterRightBody, this.thrusterRightBody.position, {
 			x: cos(angle) * power,
 			y: sin(angle) * power
