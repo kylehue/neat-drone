@@ -1,6 +1,6 @@
 class Map {
 	constructor() {
-		this.size = 15000;
+		this.size = 30000;
 		this.bounds = {
 			x: -this.size / 2,
 			y: -this.size / 2,
@@ -56,7 +56,7 @@ class Map {
 		const planetDiameter = this.planetSize * 2;
 		const gravityFieldDiameter = this.planetGravityField * 2;
 		beginShape();
-		const stepCount = this.planetGravityField / 100;
+		const stepCount = this.planetGravityField / 200;
 		let startLerpVal = 1;
 		for (var lerpVal = startLerpVal; lerpVal > 0; lerpVal -= startLerpVal / stepCount) {
 			if (lerpVal <= startLerpVal / stepCount) fill(planetColor[0], planetColor[1], planetColor[2], 255);
@@ -76,10 +76,6 @@ class Map {
 	update() {
 		for (let star of this.stars) {
 			if (game.isVisible(star.position, star.diameter * 2)) star.parallax();
-		}
-
-		for (let rock of this.rocks) {
-			rock.addToQuadtree();
 		}
 
 		for (let rock of this.rocks) {
