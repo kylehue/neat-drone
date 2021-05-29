@@ -1,6 +1,7 @@
 class Particle {
 	constructor(position, angle) {
-		this.position = createVector(position.x, position.y);
+		let seed = random(100)
+		this.position = createVector(position.x + cos(angle) * seed, position.y + sin(angle) * seed);
 		let rand = random(0.1, -0.1);
 		this.velocity = createVector(cos(angle + rand), sin(angle + rand));
 		this.velocity.mult(20);
@@ -33,7 +34,9 @@ class Particle {
 		this.diameter = lerp(this.diameter, this.maxDiameter, 0.01);
 		this.opacity = lerp(this.opacity, 0, 0.08);
 
-		if (dist(this.position.x, this.position.y, game.map.planet.position.x, game.map.planet.position.y) < game.map.planet.circleRadius) {
+		const planetY = game.map.size * 2;
+		const planetSize = game.map.size * 2;
+		if (dist(this.position.x, this.position.y, game.map.planet.position.x, planetY) < planetSize) {
 			this.velocity.y *= 0.7;
 			this.velocity.x += this.bx;
 		}

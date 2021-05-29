@@ -15,7 +15,7 @@ class Drone {
 			friction: 0.4,
 			frictionAir: 0.0001,
 			restitution: 0,
-			self: this
+			self: this,
 		});
 
 		let bodyX = [];
@@ -72,6 +72,8 @@ class Drone {
 		this.color = "#202234";
 		this.particles = [];
 
+		this.ignoreGravityField = false;
+
 		//
 		this.thrustPower = 30;
 		this.thrusterAngleVelocity = 0.1;
@@ -82,9 +84,12 @@ class Drone {
 		this.thrusterLeftRotationLimit = PI * 0.25;
 		this.thrusterRightRotationLimit = PI * 0.75;
 
+		this.thrusterLeftTrail = new Trail;
+		this.thrusterRightTrail = new Trail;
+
 		//
 		this.angleOffset = -PI / 2;
-		this.planetAngle = Math.atan2(game.map.planet.position.y - this.body.position.y, game.map.planet.position.x - this.body.position.x);
+		this.planetAngle = 0;
 	}
 
 	render() {
@@ -180,9 +185,29 @@ class Drone {
 			}
 		}
 
+		//Thruster left trail
+		const trailLeftOpacity = map(this.thrusterLeftBody.speed, 0, 200, 0, 35);
+		noStroke();
+		fill(255, trailLeftOpacity);
+		beginShape();
+		for (let vert of this.thrusterLeftTrail.vertices) {
+			curveVertex(vert.x, vert.y);
+		}
+		endShape(CLOSE);
+
+		//Thruster right trail
+		const trailRightOpacity = map(this.thrusterRightBody.speed, 0, 200, 0, 35);
+		fill(255, trailRightOpacity);
+		beginShape();
+		for (let vert of this.thrusterRightTrail.vertices) {
+			curveVertex(vert.x, vert.y);
+		}
+		endShape(CLOSE);
+
 		//Draw left thruster
-		fill(this.color);
+		/*fill(this.color);
 		stroke(clr[0] - 30, clr[1] - 30, clr[2] - 30, 100);
+		strokeWeight(1);
 		for (let part of this.thrusterLeftBody.parts) {
 			if (part != this.thrusterLeftBody.parts[0]) {
 				beginShape();
@@ -196,6 +221,7 @@ class Drone {
 		//Draw right thruster
 		fill(clr[0] + 20, clr[1] + 20, clr[2] + 20, 100);
 		stroke(clr[0], clr[1], clr[2]);
+		strokeWeight(1);
 		for (let part of this.thrusterRightBody.parts) {
 			if (part != this.thrusterRightBody.parts[0]) {
 				beginShape();
@@ -204,7 +230,7 @@ class Drone {
 				}
 				endShape(CLOSE);
 			}
-		}
+		}*/
 
 		//Thruster left design
 		let thrusterWidth = 65; //svg size
@@ -249,39 +275,14 @@ class Drone {
 		if (keyIsDown(39)) {
 			this.rotateThruster(this.thrusterLeftBody, this.thrusterAngleVelocity);
 			this.rotateThruster(this.thrusterRightBody, this.thrusterAngleVelocity);
-
 		}
 
 		//Don't let the drone go outside the map size
-		//Top
-		if (this.body.position.y <= -game.map.size / 2) {
+		if (dist(0, 0, this.body.position.x, this.body.position.y) > game.map.size / 2) {
+			const worldAngle = atan2(this.body.position.y, this.body.position.x);
 			Body.applyForce(this.body, this.body.position, {
-				x: 0,
-				y: 50
-			});
-		}
-
-		//Bottom
-		if (this.body.position.y >= game.map.size / 2) {
-			Body.applyForce(this.body, this.body.position, {
-				x: 0,
-				y: -50
-			});
-		}
-
-		//Left
-		if (this.body.position.x <= -game.map.size / 2) {
-			Body.applyForce(this.body, this.body.position, {
-				x: 50,
-				y: 0
-			});
-		}
-
-		//Right
-		if (this.body.position.x >= game.map.size / 2) {
-			Body.applyForce(this.body, this.body.position, {
-				x: -50,
-				y: 0
+				x: -cos(worldAngle) * 50,
+				y: -sin(worldAngle) * 50
 			});
 		}
 
@@ -296,13 +297,33 @@ class Drone {
 			}
 		}
 
-		//Apply gravity
-		this.planetAngle = Math.atan2(game.map.planet.position.y - this.body.position.y, game.map.planet.position.x - this.body.position.x);
-		Body.applyForce(this.body, this.body.position, {
-			x: cos(this.planetAngle) * 10,
-			y: sin(this.planetAngle) * 10
-		});
+		const planetY = game.map.size * 2;
+		this.planetAngle = atan2(planetY - this.body.position.y, game.map.planet.position.x - this.body.position.x);
+		if (this.ignoreGravityField) {
+			//Apply gravity
+			Body.applyForce(this.body, this.body.position, {
+				x: cos(this.planetAngle) * 13,
+				y: sin(this.planetAngle) * 13
+			});
+		} else {
+			//Apply gravity if the body is inside the gravity field
+			const planetSize = game.map.size * 2;
+			const planetDistance = dist(this.body.position.x, this.body.position.y, game.map.planet.position.x, planetY) - planetSize;
+			let gravityPull = map(planetDistance, game.map.planetGravityField, 0, 0, 1);
+			gravityPull = constrain(gravityPull, 0, 1);
+			if (planetDistance < game.map.planetGravityField) {
+				Body.applyForce(this.body, this.body.position, {
+					x: cos(this.planetAngle) * 13 * gravityPull,
+					y: sin(this.planetAngle) * 13 * gravityPull
+				});
+			}
+		}
 
+		this.thrusterLeftTrail.moveTo(this.thrusterLeftBody.position);
+		this.thrusterLeftTrail.update();
+
+		this.thrusterRightTrail.moveTo(this.thrusterRightBody.position);
+		this.thrusterRightTrail.update();
 	}
 
 	rotateThruster(thruster, rotation) {
@@ -336,7 +357,7 @@ class Drone {
 		});
 
 		//Add particles
-		this.addParticles(this.thrusterLeftBody.position, this.thrusterLeftBody.angle - this.angleOffset, 1);
+		this.addParticles(this.thrusterLeftBody.position, this.thrusterLeftBody.angle - this.angleOffset, 2);
 		this.thrustingLeft = true;
 	}
 
@@ -348,7 +369,7 @@ class Drone {
 		});
 
 		//Add particles
-		this.addParticles(this.thrusterRightBody.position, this.thrusterRightBody.angle - this.angleOffset, 1);
+		this.addParticles(this.thrusterRightBody.position, this.thrusterRightBody.angle - this.angleOffset, 2);
 		this.thrustingRight = true;
 	}
 

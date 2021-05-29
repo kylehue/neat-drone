@@ -57,6 +57,6 @@ function draw() {
 
 function windowResized() {
 	resizeCanvas(innerWidth, innerHeight);
-	game = new Game();
-	game.setup();
+	//game = new Game();
+	//game.setup();
 }
