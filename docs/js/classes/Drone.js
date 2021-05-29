@@ -1,5 +1,5 @@
 class Drone {
-	constructor() {
+	constructor(brain) {
 		const bodyVertices = Vertices.fromPath("M -89 -62 L -30 -92 L 30 -92 L 89 -62 L 277 -115 L 275 -101 L 57 3 L 80 24 L 100 3 L 129 46 L 138 36 L 141 14 L 147 19 L 152 41 L 145 63 L 94 130 L 117 148 L 36 148 L 76 130 L 128 63 L 101 25 L 77 54 L 30 12 L -30 12 L -77 54 L -101 25 L -128 63 L -76 130 L -36 148 L -117 148 L -94 130 L -145 63 L -152 41 L -147 19 L -141 14 L -138 36 L -129 46 L -100 3 L -80 24 L -57 3 L -275 -101 L -277 -115 Z");
 		const thrusterVertices = Vertices.fromPath("M -16.8 -54.4 L 16.8 -54.4 L 16.8 -44.8 L 32.8 2.4 L 32.8 33.6 L 16.8 59.2 L -16.8 59.2 L -32.8 33.6 L -32.8 2.4 L -16.8 -45.6 Z");
 		let offset = 100;
@@ -8,7 +8,7 @@ class Drone {
 		this.body = Bodies.fromVertices(0, game.map.size / 2 - game.map.planetOffset - 200, bodyVertices, {
 			collisionFilter: {
 				category: collisionMask.drone,
-				mask: collisionMask.staticBody | collisionMask.drone | collisionMask.thruster | collisionMask.rock,
+				mask: collisionMask.staticBody /* | collisionMask.drone | collisionMask.thruster*/ | collisionMask.rock,
 				group: -category
 			},
 			density: 0.3,
@@ -31,7 +31,7 @@ class Drone {
 		this.thrusterLeftBody = Bodies.fromVertices(this.body.position.x, this.body.position.y, thrusterVertices, {
 			collisionFilter: {
 				category: collisionMask.thruster,
-				mask: collisionMask.staticBody | collisionMask.drone | collisionMask.thruster | collisionMask.rock,
+				mask: collisionMask.staticBody /* | collisionMask.drone | collisionMask.thruster*/ | collisionMask.rock,
 				group: -category
 			},
 			density: 0.1,
@@ -42,7 +42,7 @@ class Drone {
 		this.thrusterRightBody = Bodies.fromVertices(this.body.position.x, this.body.position.y, thrusterVertices, {
 			collisionFilter: {
 				category: collisionMask.thruster,
-				mask: collisionMask.staticBody | collisionMask.drone | collisionMask.thruster | collisionMask.rock,
+				mask: collisionMask.staticBody /* | collisionMask.drone | collisionMask.thruster*/ | collisionMask.rock,
 				group: -category
 			},
 			density: 0.1,
@@ -72,11 +72,11 @@ class Drone {
 		this.color = "#202234";
 		this.particles = [];
 
-		this.ignoreGravityField = false;
+		this.ignoreGravityField = true;
 
 		//
 		this.thrustPower = 30;
-		this.thrusterAngleVelocity = 0.1;
+		this.thrusterAngularVelocity = 0.1;
 		this.thrustingLeft = false;
 		this.thrustingRight = false;
 		this.thrusterLeftRotation = 0;
@@ -90,6 +90,11 @@ class Drone {
 		//
 		this.angleOffset = -PI / 2;
 		this.planetAngle = 0;
+
+		//NEAT
+		this.score = 0;
+		this.extraPoints = 0;
+		this.brain = brain;
 	}
 
 	render() {
@@ -262,28 +267,21 @@ class Drone {
 		Body.setAngle(this.thrusterRightBody, this.body.angle + this.thrusterRightRotation);
 
 		//Check controls
-		if (keyIsDown(65)) this.thrustLeft(10);
-		if (keyIsDown(68)) this.thrustRight(10);
-		if (keyIsDown(72)) this.rotateThruster(this.thrusterLeftBody, -this.thrusterAngleVelocity);
-		if (keyIsDown(74)) this.rotateThruster(this.thrusterLeftBody, this.thrusterAngleVelocity);
-		if (keyIsDown(75)) this.rotateThruster(this.thrusterRightBody, -this.thrusterAngleVelocity);
-		if (keyIsDown(76)) this.rotateThruster(this.thrusterRightBody, this.thrusterAngleVelocity);
-		if (keyIsDown(37)) {
-			this.rotateThruster(this.thrusterLeftBody, -this.thrusterAngleVelocity);
-			this.rotateThruster(this.thrusterRightBody, -this.thrusterAngleVelocity);
-		}
-		if (keyIsDown(39)) {
-			this.rotateThruster(this.thrusterLeftBody, this.thrusterAngleVelocity);
-			this.rotateThruster(this.thrusterRightBody, this.thrusterAngleVelocity);
-		}
+		if (keyIsDown(65)) this.thrustLeft(50);
+		if (keyIsDown(68)) this.thrustRight(50);
+		if (keyIsDown(72)) this.rotateThruster(this.thrusterLeftBody, -this.thrusterAngularVelocity);
+		if (keyIsDown(74)) this.rotateThruster(this.thrusterLeftBody, this.thrusterAngularVelocity);
+		if (keyIsDown(75)) this.rotateThruster(this.thrusterRightBody, -this.thrusterAngularVelocity);
+		if (keyIsDown(76)) this.rotateThruster(this.thrusterRightBody, this.thrusterAngularVelocity);
 
 		//Don't let the drone go outside the map size
 		if (dist(0, 0, this.body.position.x, this.body.position.y) > game.map.size / 2) {
 			const worldAngle = atan2(this.body.position.y, this.body.position.x);
-			Body.applyForce(this.body, this.body.position, {
+			game.drones.splice(game.drones.indexOf(this), 1);
+			/*Body.applyForce(this.body, this.body.position, {
 				x: -cos(worldAngle) * 50,
 				y: -sin(worldAngle) * 50
-			});
+			});*/
 		}
 
 		//Update particles/smoke effect
@@ -324,6 +322,103 @@ class Drone {
 
 		this.thrusterRightTrail.moveTo(this.thrusterRightBody.position);
 		this.thrusterRightTrail.update();
+
+		this.checkGoal();
+		this.think();
+	}
+
+	think() {
+		let inputs = this.getInputs();
+		let outputs = this.brain.feedforward(inputs);
+		if (outputs[0] < 0.5) {
+			this.rotateThruster(this.thrusterLeftBody, -this.thrusterAngularVelocity);
+		} else {
+			if (outputs[1] < 0.5) {
+				this.rotateThruster(this.thrusterLeftBody, this.thrusterAngularVelocity);
+			}
+		}
+
+		if (outputs[2] < 0.5) {
+			this.rotateThruster(this.thrusterRightBody, -this.thrusterAngularVelocity);
+		} else {
+			if (outputs[3] < 0.5) {
+				this.rotateThruster(this.thrusterRightBody, this.thrusterAngularVelocity);
+			}
+		}
+
+		if (outputs[4] < 0.5) {
+			this.thrustLeft(outputs[5] * 40);
+		}
+
+		if (outputs[6] < 0.5) {
+			this.thrustRight(outputs[7] * 40);
+		}
+
+		if (!Matter.SAT.collides(this.body, game.map.planet).collided && !Matter.SAT.collides(this.thrusterRightBody, game.map.planet).collided && !Matter.SAT.collides(this.thrusterLeftBody, game.map.planet).collided) {
+			this.extraPoints += 0.001;
+		}
+
+		this.checkAsteroid();
+	}
+
+	calculateFitness() {
+		let fitness = this.score;
+		fitness += this.extraPoints;
+		this.brain.fitness = fitness;
+	}
+
+	checkAsteroid() {
+		let objects = game.map.quadtree.retrieve({
+			x: this.body.bounds.min.x,
+			y: this.body.bounds.min.y,
+			width: abs(this.body.bounds.max.x - this.body.bounds.min.x),
+			height: abs(this.body.bounds.max.y - this.body.bounds.min.y)
+		});
+
+		const rocks = [];
+		for (let object of objects) {
+			if (object.self instanceof Rock) {
+				rocks.push(object.self);
+			}
+		}
+
+		for (let rock of rocks) {
+			if (Matter.SAT.collides(this.body, rock.body).collided) {
+				game.drones.splice(game.drones.indexOf(this), 1);
+				break;
+			}
+		}
+	}
+
+	checkGoal() {
+		let objects = game.map.quadtree.retrieve({
+			x: this.body.bounds.min.x,
+			y: this.body.bounds.min.y,
+			width: abs(this.body.bounds.max.x - this.body.bounds.min.x),
+			height: abs(this.body.bounds.max.y - this.body.bounds.min.y)
+		});
+
+		const goals = [];
+		for (let object of objects) {
+			if (object.self instanceof Goal) {
+				goals.push(object.self);
+			}
+		}
+
+		for (let goal of goals) {
+			const distance = dist(this.body.position.x, this.body.position.y, goal.position.x, goal.position.y);
+			if (distance < goal.diameter * 2) {
+				let goalNewPosition = game.map.getRandomPosition();
+				const planetY = game.map.size * 2;
+				const planetSize = game.map.size * 2;
+				const offset = game.map.planetGravityField - 500;
+				while (dist(goalNewPosition.x, goalNewPosition.y, 0, planetY) < planetSize + offset || dist(0, 0, goalNewPosition.x, goalNewPosition.y) > game.map.size / 2) {
+					goalNewPosition = game.map.getRandomPosition();
+				}
+				goal.position = goalNewPosition;
+				this.score += 20;
+			}
+		}
 	}
 
 	rotateThruster(thruster, rotation) {
@@ -357,7 +452,7 @@ class Drone {
 		});
 
 		//Add particles
-		this.addParticles(this.thrusterLeftBody.position, this.thrusterLeftBody.angle - this.angleOffset, 2);
+		//this.addParticles(this.thrusterLeftBody.position, this.thrusterLeftBody.angle - this.angleOffset, 1);
 		this.thrustingLeft = true;
 	}
 
@@ -369,7 +464,7 @@ class Drone {
 		});
 
 		//Add particles
-		this.addParticles(this.thrusterRightBody.position, this.thrusterRightBody.angle - this.angleOffset, 2);
+		//this.addParticles(this.thrusterRightBody.position, this.thrusterRightBody.angle - this.angleOffset, 1);
 		this.thrustingRight = true;
 	}
 
@@ -377,5 +472,82 @@ class Drone {
 		for (var i = 0; i < amount; i++) {
 			this.particles.push(new Particle(position, angle))
 		}
+	}
+
+	getInputs() {
+		//Retrieve from quadtree
+		let objects = game.map.quadtree.retrieve({
+			x: this.body.bounds.min.x,
+			y: this.body.bounds.min.y,
+			width: abs(this.body.bounds.max.x - this.body.bounds.min.x),
+			height: abs(this.body.bounds.max.y - this.body.bounds.min.y)
+		});
+
+		//All rock objects
+		const rocks = [];
+		for (let object of objects) {
+			if (object.self instanceof Rock) {
+				rocks.push(object.self);
+			}
+		}
+
+		//Sort rocks by closest
+		rocks.sort((a, b) => {
+			return dist(this.body.position.x, this.body.position.y, a.body.position.x, a.body.position.y) - dist(this.body.position.x, this.body.position.y, b.body.position.x, b.body.position.y);
+		});
+
+		//All goal objects
+		const goals = [];
+		for (let object of objects) {
+			if (object.self instanceof Goal) {
+				goals.push(object.self);
+			}
+		}
+
+		//Sort goals by closest
+		goals.sort((a, b) => {
+			return dist(this.body.position.x, this.body.position.y, a.position.x, a.position.y) - dist(this.body.position.x, this.body.position.y, b.position.x, b.position.y);
+		});
+
+		//
+		const inputs = {};
+
+		//Body position
+		inputs.bodyPositionX = map(this.body.position.x, -game.map.size / 2, game.map.size / 2, 0, 1);
+		inputs.bodyPositionY = map(this.body.position.y, -game.map.size / 2, 0, 0, 1);
+
+		//Body velocity
+		inputs.bodyVelocityX = map(this.body.velocity.x, -100, 100, 0, 1);
+		inputs.bodyVelocityY = map(this.body.velocity.y, -100, 100, 0, 1);
+
+
+		//Body angle
+		inputs.bodyAngle = atan2(sin(this.body.angle), cos(this.body.angle));
+		inputs.bodyAngle = map(inputs.bodyAngle, -PI, PI, 0, 1);
+
+		//Body angular velocity
+		inputs.bodyAngularVelocity = map(this.body.angularVelocity, -0.3, 0.3, 0, 1);
+
+		//Closest goal position
+		const closestGoal = goals[0];
+		if (closestGoal) {
+			inputs.closestGoalPositionX = map(closestGoal.position.x, -game.map.size / 2, game.map.size / 2, 0, 1);
+			inputs.closestGoalPositionY = map(closestGoal.position.y, -game.map.size / 2, 0, 0, 1);
+		} else {
+			inputs.closestGoalPositionX = 0;
+			inputs.closestGoalPositionY = 0;
+		}
+
+		//Closest rock position
+		const closestRock = rocks[0];
+		if (closestRock) {
+			inputs.closestRockPositionX = map(closestRock.body.position.x, -game.map.size / 2, game.map.size / 2, 0, 1);
+			inputs.closestRockPositionY = map(closestRock.body.position.y, -game.map.size / 2, 0, 0, 1);
+		} else {
+			inputs.closestRockPositionX = 0;
+			inputs.closestRockPositionY = 0;
+		}
+
+		return Object.values(inputs);
 	}
 }

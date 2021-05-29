@@ -1,5 +1,5 @@
 class Rock {
-	constructor(x, y) {
+	constructor(x, y, type) {
 		let rockPathsSmall = ["M -16 -40 L 7 -30 L 15 -14 L 32 -5 L 34.8 10.6 L 18.8 36.2 L -10 34 L -30.8 10.6 L -36 -6 L -20 -30 Z", "M -12 -10 L 7 -25 L 25 -18 L 32 -3 L 24 -2 L 13 24 L -7 34 L -25.8 10.6 L -31 -6 L -25 -16 Z", "M 7 -32 L 36 -20 L 35 2 L 25 13 L 18 21 L 13 31 L -8 33 L -25.8 10.6 L -16 -2 L -27 -14 Z"];
 		let rockPathsMedium = ["M -32 -51 L 12 -49 L 70 4 L 66 24 L 37 35 L 26 62 L -16 66 L -51.6 21.2 L -35 -16 L -54 -28 Z", "M -24 -42 L 42 -20 L 70 4 L 66 24 L 31 43 L 26 62 L -16 66 L -44 56 L -34 23 L -49 -5 Z", "M 24 -52 L 42 -20 L 70 4 L 66 24 L 41 34 L 26 62 L -12 51 L -44 56 L -50 -13 L -13 -37 Z"];
 		let rockPathsBig = ["M 5 -60 L 72 -27 L 55 6 L 88 38 L 64 79 L 4 115 L -70 86 L -80 70 L -80 -20.8 L -42 -67 Z", "M -5 -70 L 18 -36 L 85 -1 L 78 28 L 23 103 L -53 91 L -74 37 L -68 10 L -87 -1 L -52 -77 Z", "M 36.3 -45.2 L 62.7 -46.4 L 70.4 -23.6 L 85.8 13.6 L 30.8 71.2 L -25 91 L -81.4 24.4 L -74.8 -16.4 L -99 -29 L -53.9 -75.2 Z"];
@@ -8,6 +8,7 @@ class Rock {
 		let rockPath = random(rockPaths);
 		if (Math.random() < 0.5) rockPath = random(rockPathsMedium);
 		if (Math.random() < 0.8) rockPath = random(rockPathsSmall);
+		if (type == "small") rockPath = random(rockPathsSmall);
 		let vertices = Vertices.fromPath(rockPath);
 
 		this.ignoreGravity = true;
@@ -39,12 +40,13 @@ class Rock {
 				Body.scale(part, 1.05, 1.05);
 			}
 		}
-
 		World.add(world, this.body);
+
+		this.color = game.map.planetColor;
 	}
 
 	render() {
-		fill(game.map.planetColor);
+		fill(this.color);
 		noStroke();
 		for (let part of this.body.parts) {
 			if (part != this.body.parts[0]) {
@@ -55,6 +57,7 @@ class Rock {
 				endShape(CLOSE);
 			}
 		}
+		this.color = game.map.planetColor;
 	}
 
 	update() {
@@ -66,7 +69,7 @@ class Rock {
 				y: -sin(worldAngle) * (this.body.mass * 0.01)
 			});
 		}
-		
+
 		//Apply gravity if rock is inside the gravity field
 		const planetY = game.map.size * 2;
 		const planetSize = game.map.size * 2;
@@ -80,6 +83,15 @@ class Rock {
 				y: sin(planetAngle) * (this.body.mass * 0.005) * gravityPull
 			});
 		}
+	}
 
+	addToQuadtree() {
+		game.map.quadtree.insert({
+			x: this.body.bounds.min.x,
+			y: this.body.bounds.min.y,
+			width: abs(this.body.bounds.max.x - this.body.bounds.min.x),
+			height: abs(this.body.bounds.max.y - this.body.bounds.min.y),
+			self: this
+		});
 	}
 }

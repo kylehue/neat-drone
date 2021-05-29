@@ -35,14 +35,20 @@ function preload() {
 
 function setup() {
 	createCanvas(innerWidth, innerHeight);
+	neat = new Neat(10, 2, 8, {
+		populationSize: 50,
+		mutationRate: 0.25,
+		warnings: true
+	});
+
 	game = new Game();
 	game.setup();
-	/*neat = new Neat(3, 2, 5, {
-		populationSize: 1,
-		mutationRate: 0,
-		warnings: false
-	});*/
 }
+
+let speed = 10;
+let genSavepoint = 30;
+let evalTime = new Date().getTime();
+let maxEvalTime = 30000;
 
 function draw() {
 	let clr = color(game.map.background).levels;
@@ -51,12 +57,42 @@ function draw() {
 	stroke(255);
 
 	game.render();
-	game.update();
-	Engine.update(engine);
+
+	for (var i = 0; i < speed; i++) {
+		game.update();
+		Engine.update(engine);
+	}
+
+	if (!game.drones.length || new Date().getTime() - evalTime > maxEvalTime) {
+		nextEval();
+		evalTime = new Date().getTime();
+	}
 }
 
 function windowResized() {
 	resizeCanvas(innerWidth, innerHeight);
-	//game = new Game();
-	//game.setup();
+}
+
+//NEAT
+function nextEval() {
+	for (let drone of game.drones) {
+		drone.calculateFitness();
+	}
+	neat.population.evolve();
+	game = new Game();
+	game.setup();
+
+	if (neat.population.generation % genSavepoint == 0) {
+		saveGen();
+	}
+}
+
+function saveGen() {
+	saveJSON(neat.toJSON(), `GEN ${neat.population.generation + 1} ${new Date().toLocaleTimeString()}`);
+}
+
+function keyPressed() {
+	if (keyCode == 16) {
+		saveGen();
+	}
 }
