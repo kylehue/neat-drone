@@ -1,2 +1,1 @@
-# neat-drone
-Drone AI
+# Drone Game
